@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flashcard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    {% include 'components/common_styles.html' %}
+    <style>
+        .card-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .question {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .answer {
+            display: none;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #dfe6e9;
+        }
+        
+        .button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+        
+        .show-answer {
+            background: #0984e3;
+            color: white;
+            margin: 1rem 0;
+        }
+        
+        .response-buttons {
+            display: none;
+            margin-top: 1.5rem;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .correct { background: #00b894; color: white; }
+        .incorrect { background: #d63031; color: white; }
+    </style>
+</head>
+<body>
+    {% with active_mode = 'courses' %}
+        {% include 'components/navbar.html' %}
+    {% endwith %}
+    
+    <div class="card-container">
+        <div class="navigation">
+            <a href="{{ url_for('course', course_id=course.id) }}" class="back-button">← Back to Course</a>
+        </div>
+        <div class="card">
+            <div class="question">{{ card.question }}</div>
+            
+            <button onclick="showAnswer()" id="show-answer" class="button show-answer">Show Answer</button>
+            
+            <div class="answer" id="answer">
+                <h3>Answer:</h3>
+                <p>{{ card.answer }}</p>
+                
+                <div class="response-buttons" id="response-buttons">
+                    <form action="{{ url_for('process_answer', card_id=card.id, course_id=course.id, mode=mode) }}" method="post" class="button-group">
+                        <button type="submit" name="is_correct" value="true" class="button correct">Got it Right ✓</button>
+                        <button type="submit" name="is_correct" value="false" class="button incorrect">Got it Wrong ✗</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showAnswer() {
+            document.getElementById('answer').style.display = 'block';
+            document.getElementById('show-answer').style.display = 'none';
+            document.getElementById('response-buttons').style.display = 'block';
+        }
+    </script>
+</body>
+</html> 
