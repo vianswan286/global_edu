@@ -61,10 +61,9 @@ WITH card_quality AS (
     SELECT
         cc.course_id,
         ck.knowledge_id,
-        SUM(COALESCE(sc.mark, 0)) AS quality
+        SUM(ck.quality) AS total_quality
     FROM courses_cards cc
     JOIN cards_knowledges ck ON cc.card_id = ck.card_id
-    LEFT JOIN students_cards sc ON cc.card_id = sc.card_id
     GROUP BY cc.course_id, ck.knowledge_id
 )
 SELECT
@@ -72,11 +71,13 @@ SELECT
     c.name AS course_name,
     k.id AS knowledge_id,
     k.name AS knowledge_name,
-    cq.quality AS total_quality
+    cq.total_quality
 FROM card_quality cq
 JOIN courses c ON cq.course_id = c.id
 JOIN knowledges k ON cq.knowledge_id = k.id
-ORDER BY c.id, total_quality DESC;
+ORDER BY c.id, cq.total_quality DESC;
+
+
 
 
 --проверка логина--
@@ -88,7 +89,7 @@ SELECT EXISTS (
 ) AS hash_exists;
 
 
---все кеурсы по тегу--
+--все кеурсы по тегу ООП--
 SELECT DISTINCT
     c.id,
     c.name,
@@ -119,9 +120,3 @@ SELECT
     answer
 FROM cards
 WHERE id = 1;
-
-
-
-
-
-

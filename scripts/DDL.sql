@@ -1,3 +1,20 @@
+DROP TABLE IF EXISTS courses_required_knowledges CASCADE;
+DROP TABLE IF EXISTS courses_final_knowledges CASCADE;
+DROP TABLE IF EXISTS tags_collections CASCADE;
+DROP TABLE IF EXISTS tags_courses CASCADE;
+DROP TABLE IF EXISTS courses_cards CASCADE;
+DROP TABLE IF EXISTS knowledges_collections CASCADE;
+DROP TABLE IF EXISTS cards_knowledges CASCADE;
+DROP TABLE IF EXISTS students_knowledges CASCADE;
+DROP TABLE IF EXISTS students_cards CASCADE;
+DROP TABLE IF EXISTS tags CASCADE;
+DROP TABLE IF EXISTS courses CASCADE;
+DROP TABLE IF EXISTS collections CASCADE;
+DROP TABLE IF EXISTS knowledges CASCADE;
+DROP TABLE IF EXISTS cards CASCADE;
+DROP TABLE IF EXISTS students CASCADE;
+
+
 -- 1. STUDENTS (студенты)
 CREATE TABLE students (
     id SERIAL PRIMARY KEY,
@@ -79,6 +96,7 @@ CREATE TABLE cards_knowledges (
     id SERIAL PRIMARY KEY,
     card_id INTEGER NOT NULL,
     knowledge_id INTEGER NOT NULL,
+    quality INTEGER NOT NULL,
     FOREIGN KEY (card_id) REFERENCES cards(id),
     FOREIGN KEY (knowledge_id) REFERENCES knowledges(id)
 );
