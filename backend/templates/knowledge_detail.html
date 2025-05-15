@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ knowledge.name }} - Learning Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>{{ knowledge.name }}</h1>
+        <div class="progress mb-3" style="height: 15px;">
+            <div class="progress-bar bg-success" role="progressbar" 
+                 style="width: {{ quality }}%;" 
+                 aria-valuenow="{{ quality }}" aria-valuemin="0" aria-valuemax="100">
+                Mastery: {{ quality }}%
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('knowledge.knowledge_list') }}" class="btn btn-outline-secondary">
+            Back to Knowledge
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Description</h3>
+            </div>
+            <div class="card-body">
+                <p>{{ knowledge.description or 'No description available.' }}</p>
+            </div>
+        </div>
+        
+        {% if knowledge.theory %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Theory</h3>
+            </div>
+            <div class="card-body">
+                <div class="theory-content">
+                    {{ knowledge.theory|safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Related Courses</h3>
+            </div>
+            <div class="card-body">
+                <p>Courses that can help you improve this knowledge:</p>
+                <div class="list-group">
+                    <!-- This would be populated dynamically in a real application -->
+                    <div class="alert alert-info">
+                        No related courses found at this time.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
