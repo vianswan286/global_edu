@@ -1,47 +1,49 @@
-# Learning Platform
+Образовательная Платформа
 
-An educational platform that tracks user knowledge through a tool of "elementary" knowledge - small pieces of which everything consists. Allows users to take a course from a list, having seen in advance how long it will take and what knowledge it will give + what it will require from the user.
+Образовательная платформа, отслеживающая знания пользователей с помощью инструмента "элементарных" знаний — небольших единиц, из которых всё состоит. Позволяет пользователям проходить курсы из списка, заранее видя, сколько времени это займет, какие знания даст и что потребует от пользователя.
+Возможности
 
+    Аутентификация пользователей (вход/регистрация)
 
-## Features
+    Список курсов с указанием предварительных требований и оценкой времени прохождения
 
-- User authentication (login/register)
-- Course listing with prerequisites and estimated time
-- Knowledge tracking system
-- Knowledge shop (coming soon)
+    Система отслеживания знаний
 
-## Requirements
+    Магазин знаний (в разработке)
 
-- Python 3.8+
-- PostgreSQL
-- Flask and extensions (see requirements.txt)
+Требования
 
-## Getting Started
+    Python 3.8+
 
-1. Clone the repository
-2. Create a virtual environment:
-   ```
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-4. Make sure PostgreSQL is running with a user 'postgres' with password 'postgres'. The application will create a database called 'edu_project'
-5. Run the application:
-   ```
-   python run.py
-   ```
-6. Access the application at http://localhost:5001
+    PostgreSQL
 
-## Default Login
+    Flask и его расширения (см. requirements.txt)
 
-After running the setup, you will need to register a new user through the application interface. All data shown in the app is loaded directly from the database; there is no hardcoded or example data.
-## Database Structure
+Начало работы
 
-The database structure follows a structure designed to track user knowledge. Initial data is loaded from `scripts/modified_DML.sql`.
+    Клонируйте репозиторий
 
-## Technical Documentation
+    Создайте виртуальное окружение:
 
-For more detailed technical information, please see the [TECHNICAL_INFO.md](TECHNICAL_INFO.md) file.
+python -m venv .venv
+source .venv/bin/activate  # Для Windows: .venv\Scripts\activate
+
+Установите зависимости:
+
+pip install -r requirements.txt
+
+Убедитесь, что PostgreSQL запущен с пользователем 'postgres' и паролем 'postgres'. Приложение создаст базу данных с названием 'edu_project'
+
+Запустите приложение:
+
+    python run.py
+
+    Доступ к приложению: http://localhost:5001
+
+Данные для входа по умолчанию
+
+После запуска необходимо зарегистрировать нового пользователя через интерфейс приложения. Все данные, отображаемые в приложении, загружаются напрямую из базы данных; жестко заданных или примерных данных нет.
+Структура базы данных
+
+Структура базы данных разработана для отслеживания знаний пользователей. Начальные данные загружаются из файла scripts/modified_DML.sql.
+Техническая документация
