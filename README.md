@@ -1,6 +1,7 @@
 # Learning Platform
 
-Образовательная платформа, отслеживающая знания пользователя через инструмент "элементарных" знаний - маленьких кусков из которых всё состоит. Позволяет пользователям пройти курс из списка, увидев предварительно, сколько времени он займёт и какие знания даст + какие потребует от пользователя.
+An educational platform that tracks user knowledge through a tool of "elementary" knowledge - small pieces of which everything consists. Allows users to take a course from a list, having seen in advance how long it will take and what knowledge it will give + what it will require from the user.
+
 
 ## Features
 
