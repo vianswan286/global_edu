@@ -157,7 +157,9 @@ def apply_sql_scripts():
         # Then execute DML scripts (data) in the dependency order
         ('DML', 'collections.sql'),       # First create collections
         ('DML', 'math_collections.sql'),  # Then math collections
-        ('DML', 'math_knowledges.sql')    # Finally knowledge units
+        ('DML', 'math_knowledges.sql'),   # Knowledge units
+        ('DML', 'sample_cards.sql'),      # Sample cards for courses
+        ('DML', 'courses_setup.sql')      # Setup 5 courses with 10 cards each
     ]
     
     # Execute scripts in specified order
@@ -194,18 +196,18 @@ def apply_sql_scripts():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Educational Platform Application')
-    parser.add_argument('--reset-db', action='store_true', help='Reset the database and apply SQL scripts')
+    parser.add_argument('--no-reset', action='store_true', help='Start without resetting the database')
     args = parser.parse_args()
     
-    if args.reset_db:
+    if not args.no_reset:
         print("Resetting database...")
         reset_database()
         apply_sql_scripts()
         print("Database reset and recreation completed successfully!")
-    else:
-        print("Starting Flask application...")
-        app.run(
-            debug=FLASK_CONFIG['debug'], 
-            host=FLASK_CONFIG['host'], 
-            port=FLASK_CONFIG['port']
-        )
+    
+    print("Starting Flask application...")
+    app.run(
+        debug=FLASK_CONFIG['debug'], 
+        host=FLASK_CONFIG['host'], 
+        port=FLASK_CONFIG['port']
+    )

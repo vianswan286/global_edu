@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request
+from flask import Blueprint, render_template, redirect, url_for, request, jsonify
 from flask_login import login_required, current_user
 from .models import Course, CourseFinalKnowledge, CourseRequiredKnowledge, StudentKnowledge, Knowledge, Tag, CourseCard, Card, StudentCard, CardKnowledge
 from datetime import datetime
@@ -98,6 +98,26 @@ def course_list():
         # Use course time from database
         estimated_time = course.estimated_time
         
+        # Calculate student progress for this course
+        course_cards = CourseCard.query.filter_by(course_id=course.id).all()
+        total_cards = len(course_cards)
+        completed_cards = 0
+        
+        if total_cards > 0 and current_user.is_authenticated:
+            # Count how many cards the student has completed
+            for cc in course_cards:
+                student_card = StudentCard.query.filter_by(
+                    student_id=current_user.id,
+                    card_id=cc.card_id
+                ).first()
+                if student_card and student_card.mark is not None:
+                    completed_cards += 1
+            
+            # Calculate progress percentage
+            student_progress = int((completed_cards / total_cards) * 100) if total_cards > 0 else 0
+        else:
+            student_progress = 0
+        
         # Add to course data - always set can_start to True
         course_data.append({
             'id': course.id,
@@ -105,7 +125,10 @@ def course_list():
             'description': course.description,
             'estimated_time': estimated_time,
             'missing_prerequisites': missing_prerequisites,
-            'can_start': True  # Allow starting any course regardless of prerequisites
+            'can_start': True,  # Allow starting any course regardless of prerequisites
+            'student_progress': student_progress,
+            'completed_cards': completed_cards,
+            'total_cards': total_cards
         })
     
     # Get all user's knowledge including those with zero quality
@@ -178,6 +201,7 @@ def start_course(course_id):
                 'id': card.id,
                 'question': card.question,
                 'answer': card.answer,
+                'time_minutes': card.time_minutes,
                 'completed': completed
             })
     

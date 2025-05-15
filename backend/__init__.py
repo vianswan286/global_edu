@@ -40,6 +40,9 @@ def create_app():
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
     
+    from .knowledge_shop import knowledge_shop as knowledge_shop_blueprint
+    app.register_blueprint(knowledge_shop_blueprint)
+    
     from .courses import courses as courses_blueprint
     app.register_blueprint(courses_blueprint)
     

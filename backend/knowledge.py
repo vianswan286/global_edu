@@ -47,4 +47,40 @@ def knowledge_detail(knowledge_id):
     
     quality = sk.quality if sk else 0
     
-    return render_template('knowledge_detail.html', knowledge=k, quality=quality)
+    # Get courses that provide this knowledge
+    from .models import Course, CourseFinalKnowledge, CourseCard, StudentCard
+    from sqlalchemy import func
+    
+    # Find courses related to this knowledge
+    related_courses = []
+    course_connections = CourseFinalKnowledge.query.filter_by(knowledge_id=str(knowledge_id_to_use)).all()
+    
+    for connection in course_connections:
+        course = Course.query.get(connection.course_id)
+        if course:
+            # Calculate student progress in this course
+            course_cards = CourseCard.query.filter_by(course_id=course.id).count()
+            completed_cards = 0
+            if course_cards > 0:
+                completed_cards = StudentCard.query.filter(
+                    StudentCard.student_id == current_user.id,
+                    StudentCard.card_id.in_([cc.card_id for cc in CourseCard.query.filter_by(course_id=course.id)])  
+                ).filter(StudentCard.mark.isnot(None)).count()
+            
+            progress_percent = (completed_cards / course_cards * 100) if course_cards > 0 else 0
+            
+            related_courses.append({
+                'id': course.id,
+                'name': course.name,
+                'description': course.description,
+                'quality': connection.quality,  # Knowledge quality this course provides
+                'estimated_time': course.estimated_time,
+                'progress_percent': progress_percent,
+                'completed_cards': completed_cards,
+                'total_cards': course_cards
+            })
+    
+    # Sort courses by how much knowledge quality they provide (most first)
+    related_courses.sort(key=lambda x: x['quality'], reverse=True)
+    
+    return render_template('knowledge_detail.html', knowledge=k, quality=quality, related_courses=related_courses)

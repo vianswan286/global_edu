@@ -7,6 +7,19 @@
     <div class="col-md-8">
         <h1>{{ course.name }}</h1>
         <p class="lead">{{ course.description }}</p>
+        <p><strong>Estimated time to complete:</strong> {{ course.estimated_time }} minutes</p>
+        
+        <!-- Course Progress Bar -->
+        {% set completed_cards = course_cards|selectattr('completed', 'eq', true)|list|length %}
+        {% set total_cards = course_cards|length %}
+        {% set progress_percent = (completed_cards / total_cards * 100) if total_cards > 0 else 0 %}
+        
+        <div class="progress mb-3" style="height: 20px;">
+            <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent }}%;" 
+                 aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                {{ completed_cards }}/{{ total_cards }} cards ({{ progress_percent|round|int }}%)
+            </div>
+        </div>
     </div>
     <div class="col-md-4 text-end">
         <a href="{{ url_for('courses.course_list') }}" class="btn btn-outline-secondary">
@@ -40,6 +53,9 @@
                                 <div class="flashcard-front" id="front-{{ loop.index0 }}">
                                     <h4 class="card-title">{{ card.question }}</h4>
                                     <p class="card-text text-muted">Click to see answer</p>
+                                    {% if card.time_minutes %}
+                                    <p class="card-text"><small class="text-muted">Estimated time: {{ card.time_minutes }} minutes</small></p>
+                                    {% endif %}
                                 </div>
                                 <div class="flashcard-back" id="back-{{ loop.index0 }}" style="display: none;">
                                     <h5 class="card-title">Answer:</h5>
@@ -135,21 +151,66 @@
                 }
                 
                 function markCard(cardId, difficulty) {
+                    // Immediately update UI before AJAX request
+                    const cardElement = document.getElementById('card-' + currentCardIndex);
+                    const statusBadge = cardElement.querySelector('.badge');
+                    if (statusBadge) {
+                        statusBadge.className = 'badge bg-success';
+                        statusBadge.textContent = 'Completed';
+                    }
+                    
+                    // Hide the mark buttons immediately
+                    const markButtons = cardElement.querySelectorAll('.mark-btn');
+                    markButtons.forEach(btn => btn.style.display = 'none');
+                    
+                    // Update progress bar
+                    updateCourseProgress();
+                    
                     // Send AJAX request to mark the card
                     fetch('/cards/' + cardId + '/mark', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({ difficulty: difficulty })
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Move to the next card
-                            nextCard();
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
                         }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Automatically move to the next card after a short delay
+                        setTimeout(() => {
+                            nextCard();
+                        }, 1000); // Wait 1 second before advancing
+                    })
+                    .catch(error => {
+                        console.error('Error marking card:', error);
+                        // Revert UI changes if there was an error
+                        if (statusBadge) {
+                            statusBadge.className = 'badge bg-secondary';
+                            statusBadge.textContent = 'Not started';
+                        }
+                        // Show buttons again
+                        markButtons.forEach(btn => btn.style.display = 'inline-block');
                     });
+                }
+                
+                // Function to update the overall course progress
+                function updateCourseProgress() {
+                    const completedCards = document.querySelectorAll('.badge.bg-success').length;
+                    const totalCards = {{ course_cards|length }};
+                    const progressPercent = (completedCards / totalCards * 100);
+                    
+                    // Update main progress bar
+                    const mainProgressBar = document.querySelector('.progress .progress-bar');
+                    if (mainProgressBar) {
+                        mainProgressBar.style.width = progressPercent + '%';
+                        mainProgressBar.setAttribute('aria-valuenow', progressPercent);
+                        mainProgressBar.textContent = completedCards + '/' + totalCards + ' cards (' + Math.round(progressPercent) + '%)';
+                    }
                 }
                 
                 // Initialize

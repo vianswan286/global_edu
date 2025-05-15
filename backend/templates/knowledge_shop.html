@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Course Roadmap Shop{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Course Roadmap Shop</h1>
+                <div>
+                    <a href="{{ url_for('knowledge_shop.view_roadmap') }}" class="btn btn-primary position-relative">
+                        <i class="bi bi-map"></i> View Roadmap
+                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ cart|length }}
+                        </span>
+                    </a>
+                </div>
+            </div>
+            
+            <p class="lead">Select courses you want to learn, and we'll create a personalized learning roadmap that considers prerequisites and your current knowledge.</p>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Available Courses</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Course Name</th>
+                                    <th>Description</th>
+                                    <th>Progress</th>
+                                    <th>Prerequisites</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for course in courses %}
+                                <tr id="course-row-{{ course.id }}">
+                                    <td><strong>{{ course.name }}</strong></td>
+                                    <td>{{ course.description }}</td>
+                                    <td>
+                                        {% set progress = course_progress[course.id]['progress_percent'] %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar {% if progress > 0 %}bg-success{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ progress }}%;" 
+                                                 aria-valuenow="{{ progress }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ progress|round }}%
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">{{ course_progress[course.id]['completed_cards'] }}/{{ course_progress[course.id]['total_cards'] }} cards</small>
+                                    </td>
+                                    <td>
+                                        {% set prereq_percent = course_progress[course.id]['prereq_percent'] %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar {% if prereq_percent == 100 %}bg-success{% elif prereq_percent >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ prereq_percent }}%;" 
+                                                 aria-valuenow="{{ prereq_percent }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ prereq_percent|round }}%
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            {% if course_progress[course.id]['prerequisites']|length > 0 %}
+                                                {% set met = course_progress[course.id]['prerequisites']|selectattr('is_met', 'equalto', true)|list|length %}
+                                                {% set total = course_progress[course.id]['prerequisites']|length %}
+                                                {{ met }}/{{ total }} prerequisites met
+                                            {% else %}
+                                                No prerequisites
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if course.id in cart %}
+                                            <button class="btn btn-sm btn-danger remove-course" 
+                                                    data-course-id="{{ course.id }}" 
+                                                    data-course-name="{{ course.name }}">
+                                                Remove from Roadmap
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-success add-course" 
+                                                    data-course-id="{{ course.id }}" 
+                                                    data-course-name="{{ course.name }}">
+                                                Add to Roadmap
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if course_progress[course.id]['prerequisites']|length > 0 and not loop.last %}
+                                <tr class="table-light">
+                                    <td colspan="5">
+                                        <div class="small fw-light">
+                                            <strong>Prerequisites:</strong>
+                                            {% for prereq in course_progress[course.id]['prerequisites'] %}
+                                                <span class="badge {% if prereq.is_met %}bg-success{% else %}bg-danger{% endif %} me-1">
+                                                    {{ prereq.name }} ({{ prereq.current_quality }}/{{ prereq.required_quality }})
+                                                </span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Your Roadmap</h5>
+                </div>
+                <div class="card-body">
+                    <div id="cart-preview">
+                        {% if cart %}
+                        <p class="text-muted">These are the courses you want to take:</p>
+                        <ul class="list-group mb-3">
+                            {% for course_id in cart %}
+                                {% for course in courses %}
+                                    {% if course.id == course_id %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ course.name }}</strong>
+                                            {% if course_progress[course.id]['prerequisites']|length > 0 %}
+                                                <div class="small text-muted">
+                                                    {{ course_progress[course.id]['prereq_percent']|round }}% prerequisites met
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <button class="btn btn-sm btn-danger remove-course" 
+                                                data-course-id="{{ course.id }}">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                        <a href="{{ url_for('knowledge_shop.view_roadmap') }}" class="btn btn-primary w-100">
+                            Generate Learning Roadmap
+                        </a>
+                        <button id="clear-cart" class="btn btn-outline-danger w-100 mt-2">Clear Selection</button>
+                        {% else %}
+                        <p>You haven't selected any courses yet. Add courses to generate a personalized learning roadmap.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">How It Works</h5>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li>Select courses you want to learn</li>
+                        <li>We analyze the prerequisites for each course</li>
+                        <li>We check which prerequisites you've already mastered</li>
+                        <li>We create a roadmap showing the optimal learning path</li>
+                        <li>You can see which prerequisites you might need to skip</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .progress-bar {
+        transition: width 0.5s ease;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add course functionality
+        document.querySelectorAll('.add-course').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const courseId = this.getAttribute('data-course-id');
+                const courseName = this.getAttribute('data-course-name');
+                
+                fetch("{{ url_for('knowledge_shop.add_course') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'course_id=' + courseId
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the cart count
+                        document.getElementById('cart-count').textContent = data.cart_count;
+                        
+                        // Change button to "Remove from Roadmap"
+                        this.classList.remove('btn-success', 'add-course');
+                        this.classList.add('btn-danger', 'remove-course');
+                        this.textContent = 'Remove from Roadmap';
+                        
+                        // Refresh the page to update the display
+                        location.reload();
+                    }
+                });
+            });
+        });
+        
+        // Remove course functionality
+        document.querySelectorAll('.remove-course').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const courseId = this.getAttribute('data-course-id');
+                
+                fetch("{{ url_for('knowledge_shop.remove_course') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'course_id=' + courseId
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the cart count
+                        document.getElementById('cart-count').textContent = data.cart_count;
+                        
+                        // Refresh the page to update the display
+                        location.reload();
+                    }
+                });
+            });
+        });
+        
+        // Clear cart functionality
+        const clearCartButton = document.getElementById('clear-cart');
+        if (clearCartButton) {
+            clearCartButton.addEventListener('click', function() {
+                fetch("{{ url_for('knowledge_shop.clear_cart') }}", {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Refresh the page to update the display
+                        location.reload();
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -26,6 +26,7 @@ class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     question = db.Column(db.Text, nullable=False)
     answer = db.Column(db.Text, nullable=False)
+    time_minutes = db.Column(db.Integer, default=5)  # Time in minutes to complete this card
     
     knowledges = db.relationship('CardKnowledge', back_populates='card')
     courses = db.relationship('CourseCard', back_populates='card')

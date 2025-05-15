@@ -30,7 +30,25 @@
                     <span class="badge bg-info text-dark">
                         <i class="bi bi-clock"></i> Estimated time: {{ course.estimated_time }} minutes
                     </span>
+                    
+                    {% if course.student_progress is defined %}
+                    <span class="badge bg-success">
+                        <i class="bi bi-graph-up"></i> Progress: {{ course.student_progress }}%
+                    </span>
+                    {% endif %}
                 </div>
+                
+                {% if course.completed_cards is defined and course.total_cards > 0 %}
+                <!-- Course Progress Bar -->
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: {{ (course.completed_cards / course.total_cards * 100)|round|int }}%;" 
+                         aria-valuenow="{{ (course.completed_cards / course.total_cards * 100)|round|int }}" 
+                         aria-valuemin="0" aria-valuemax="100">
+                        {{ course.completed_cards }}/{{ course.total_cards }} cards
+                    </div>
+                </div>
+                {% endif %}
                 
                 {% if course.missing_prerequisites %}
                 <div class="alert alert-warning">
