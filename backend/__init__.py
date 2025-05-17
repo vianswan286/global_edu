@@ -19,6 +19,11 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}/{DB_CONFIG['name']}"
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
+    # Session configuration
+    app.config['SESSION_TYPE'] = 'filesystem'
+    app.config['SESSION_PERMANENT'] = True
+    app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # Session lifetime in seconds (1 hour)
+    
     # Initialize database with app
     db.init_app(app)
     

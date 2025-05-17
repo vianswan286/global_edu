@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Знания и курсы{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Знания и курсы</h1>
+    
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Выберите знания</h3>
+                </div>
+                <div class="card-body">
+                    <form id="knowledgeForm" method="POST" action="{{ url_for('knowledge_shop.show_courses_for_knowledge') }}">
+                        <div class="row">
+                            {% for knowledge in knowledges %}
+                            <div class="col-md-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="knowledge_ids" value="{{ knowledge.id }}" id="knowledge-{{ knowledge.id }}">
+                                    <label class="form-check-label" for="knowledge-{{ knowledge.id }}">
+                                        {{ knowledge.name }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">Показать курсы</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        {% if recommended_courses %}
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Рекомендуемые курсы</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for course in recommended_courses %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ course.name }}</h5>
+                                    <p class="card-text">{{ course.description }}</p>
+                                    <div class="mt-2">
+                                        <strong>Даёт знания:</strong>
+                                        <div>
+                                            {% for knowledge in course.provided_knowledges %}
+                                            <span class="badge {% if knowledge.id in selected_knowledge_ids %}bg-success{% else %}bg-secondary{% endif %} me-1">
+                                                {{ knowledge.name }}
+                                            </span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <a href="{{ url_for('courses.start_course', course_id=course.id) }}" class="btn btn-primary">Начать курс</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if selected_knowledges %}
+        <div class="col-md-12 mt-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Выбранные знания</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for knowledge in selected_knowledges %}
+                        <div class="col-md-4 mb-2">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ knowledge.name }}</h5>
+                                    <p class="card-text">{{ knowledge.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

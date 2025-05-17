@@ -10,4 +10,4 @@ if __name__ == '__main__':
     # Only run the app without creating tables or seeding data
     # This ensures we only read from the existing database
     print("Starting Flask application with existing database data...")
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')

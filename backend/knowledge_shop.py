@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash
 from flask_login import login_required, current_user
 from sqlalchemy import func, desc
 from .models import Knowledge, StudentKnowledge, Course, CourseCard, Card, StudentCard, CourseFinalKnowledge, CourseRequiredKnowledge
@@ -9,22 +9,174 @@ knowledge_shop = Blueprint('knowledge_shop', __name__)
 @knowledge_shop.route('/knowledge-shop')
 @login_required
 def shop_view():
-    """
-    Main view for the Knowledge Shop feature.
-    Shows all available knowledge units and lets students select ones they want to learn.
-    """
-    # Get all knowledge units
+    """Перенаправление на новый интерфейс выбора знаний"""
+    return redirect(url_for('knowledge_shop.simple_knowledge_courses'))
+    
+@knowledge_shop.route('/simple-knowledge-courses', methods=['GET'])
+@login_required
+def simple_knowledge_courses():
+    """Простая страница для выбора знаний и отображения курсов"""
+    # Получаем все знания
     all_knowledge = Knowledge.query.all()
     
-    # Get student's existing knowledge quality
+    # Получаем текущий уровень знаний студента
     student_knowledge = {}
     for sk in StudentKnowledge.query.filter_by(student_id=current_user.id).all():
         student_knowledge[sk.knowledge_id] = sk.quality
     
-    # Prepare data for the template
+    # Подготавливаем данные для шаблона
     knowledge_data = []
     for k in all_knowledge:
-        # Get courses that provide this knowledge
+        knowledge_data.append({
+            'id': k.id,
+            'name': k.name,
+            'description': k.description,
+            'current_quality': student_knowledge.get(k.id, 0)
+        })
+    
+    # Сортируем знания по имени
+    knowledge_data.sort(key=lambda x: x['name'])
+    
+    # Получаем все курсы и их знания
+    all_courses = Course.query.all()
+    
+    # Для каждого курса получаем знания, которые он дает
+    courses_data = []
+    for course in all_courses:
+        # Получаем знания, которые дает курс
+        provided_knowledges = []
+        for cfk in CourseFinalKnowledge.query.filter_by(course_id=course.id).all():
+            # Пробуем разные способы получения знания
+            knowledge = None
+            
+            # Способ 1: Пробуем преобразовать knowledge_id в целое число
+            try:
+                knowledge_id = int(cfk.knowledge_id)
+                knowledge = Knowledge.query.get(knowledge_id)
+            except (ValueError, TypeError):
+                pass
+                
+            # Способ 2: Пробуем найти знание по имени
+            if knowledge is None:
+                knowledge = Knowledge.query.filter_by(name=cfk.knowledge_id).first()
+            
+            if knowledge:
+                provided_knowledges.append({
+                    'id': knowledge.id,
+                    'name': knowledge.name
+                })
+        
+        courses_data.append({
+            'id': course.id,
+            'name': course.name,
+            'description': course.description,
+            'provided_knowledges': provided_knowledges
+        })
+    
+    return render_template('simple_knowledge_courses.html', 
+                          knowledges=knowledge_data,
+                          recommended_courses=courses_data,
+                          selected_knowledges=None,
+                          selected_knowledge_ids=[])
+                          
+@knowledge_shop.route('/show-courses-for-knowledge', methods=['POST'])
+@login_required
+def show_courses_for_knowledge():
+    """Показать 2 случайных курса для выбранных знаний"""
+    import random
+    
+    # Получаем выбранные знания из формы
+    knowledge_ids = request.form.getlist('knowledge_ids')
+    
+    # Преобразуем строковые ID в целые числа
+    knowledge_ids = [int(kid) for kid in knowledge_ids if kid.isdigit()]
+    
+    if not knowledge_ids:
+        flash('Выберите хотя бы одно знание', 'warning')
+        return redirect(url_for('knowledge_shop.simple_knowledge_courses'))
+    
+    # Получаем все знания
+    all_knowledge = Knowledge.query.all()
+    
+    # Подготавливаем данные для шаблона
+    knowledge_data = []
+    for k in all_knowledge:
+        knowledge_data.append({
+            'id': k.id,
+            'name': k.name,
+            'description': k.description
+        })
+    
+    # Сортируем знания по имени
+    knowledge_data.sort(key=lambda x: x['name'])
+    
+    # Получаем выбранные знания
+    selected_knowledges = [k for k in knowledge_data if k['id'] in knowledge_ids]
+    
+    # Получаем все курсы
+    all_courses = Course.query.all()
+    
+    # Для каждого курса получаем знания, которые он дает
+    courses_data = []
+    for course in all_courses:
+        # Получаем знания, которые дает курс
+        provided_knowledges = []
+        for cfk in CourseFinalKnowledge.query.filter_by(course_id=course.id).all():
+            # Пробуем разные способы получения знания
+            knowledge = None
+            
+            # Способ 1: Пробуем преобразовать knowledge_id в целое число
+            try:
+                knowledge_id = int(cfk.knowledge_id)
+                knowledge = Knowledge.query.get(knowledge_id)
+            except (ValueError, TypeError):
+                pass
+                
+            # Способ 2: Пробуем найти знание по имени
+            if knowledge is None:
+                knowledge = Knowledge.query.filter_by(name=cfk.knowledge_id).first()
+            
+            if knowledge:
+                provided_knowledges.append({
+                    'id': knowledge.id,
+                    'name': knowledge.name
+                })
+        
+        courses_data.append({
+            'id': course.id,
+            'name': course.name,
+            'description': course.description,
+            'provided_knowledges': provided_knowledges
+        })
+    
+    # Выбираем 2 случайных курса
+    if len(courses_data) > 2:
+        recommended_courses = random.sample(courses_data, 2)
+    else:
+        recommended_courses = courses_data
+    
+    return render_template('simple_knowledge_courses.html', 
+                          knowledges=knowledge_data,
+                          recommended_courses=recommended_courses,
+                          selected_knowledges=selected_knowledges,
+                          selected_knowledge_ids=knowledge_ids)
+
+@knowledge_shop.route('/knowledge-selector')
+@login_required
+def knowledge_selector():
+    """Страница выбора знаний для изучения"""
+    # Получаем все знания
+    all_knowledge = Knowledge.query.all()
+    
+    # Получаем текущий уровень знаний студента
+    student_knowledge = {}
+    for sk in StudentKnowledge.query.filter_by(student_id=current_user.id).all():
+        student_knowledge[sk.knowledge_id] = sk.quality
+    
+    # Подготавливаем данные для шаблона
+    knowledge_data = []
+    for k in all_knowledge:
+        # Получаем курсы, которые дают это знание
         providing_courses = []
         for cfk in CourseFinalKnowledge.query.filter_by(knowledge_id=str(k.id)).all():
             course = Course.query.get(cfk.course_id)
@@ -44,197 +196,202 @@ def shop_view():
             'providing_courses': providing_courses
         })
     
-    # Sort knowledge by name
+    # Сортируем знания по имени
     knowledge_data.sort(key=lambda x: x['name'])
     
-    # Get the knowledge cart from session
+    # Получаем выбранные знания из сессии
     knowledge_cart = session.get('knowledge_cart', [])
     
-    return render_template('knowledge_shop.html', 
+    return render_template('knowledge_selector.html', 
                           knowledges=knowledge_data,
                           cart=knowledge_cart)
 
 @knowledge_shop.route('/knowledge-shop/add-knowledge', methods=['POST'])
 @login_required
 def add_knowledge_to_cart():
-    """
-    Add a knowledge unit to the shopping cart.
-    """
-    knowledge_id = request.json.get('knowledge_id')
+    """Добавление знания в список выбранных"""
+    # Проверяем, что данные пришли в формате JSON
+    if not request.is_json:
+        return jsonify({'success': False, 'message': 'Ожидается JSON'}), 400
+        
+    data = request.get_json()
+    knowledge_id = data.get('knowledge_id')
+    
+    # Преобразуем knowledge_id в int, так как из JSON он может прийти как строка
+    try:
+        knowledge_id = int(knowledge_id)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': 'Некорректный ID знания'}), 400
     
     if not knowledge_id:
-        return jsonify({'success': False, 'message': 'No knowledge ID provided'})
+        return jsonify({'success': False, 'message': 'Не указан ID знания'}), 400
     
-    # Make sure knowledge exists
+    # Проверяем, существует ли знание
     knowledge = Knowledge.query.get(knowledge_id)
     if not knowledge:
-        return jsonify({'success': False, 'message': 'Knowledge not found'})
+        return jsonify({'success': False, 'message': 'Знание не найдено'}), 404
     
-    # Get cart from session
+    # Получаем список из сессии
     knowledge_cart = session.get('knowledge_cart', [])
     
-    # Add knowledge to cart if not already in
+    # Преобразуем все ID в списке в int для корректного сравнения
+    knowledge_cart = [int(k_id) for k_id in knowledge_cart]
+    
+    # Добавляем знание, если его еще нет в списке
     if knowledge_id not in knowledge_cart:
         knowledge_cart.append(knowledge_id)
         session['knowledge_cart'] = knowledge_cart
-        return jsonify({'success': True, 'message': f'Added {knowledge.name} to your learning goals'})
+        # Принудительно сохраняем сессию
+        session.modified = True
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Знание "{knowledge.name}" добавлено в список',
+            'cart_count': len(knowledge_cart)
+        })
     else:
-        return jsonify({'success': False, 'message': 'Knowledge already in learning goals'})
+        return jsonify({'success': False, 'message': 'Это знание уже в списке'})
 
 @knowledge_shop.route('/knowledge-shop/remove-knowledge', methods=['POST'])
 @login_required
 def remove_knowledge_from_cart():
-    """
-    Remove a knowledge unit from the shopping cart.
-    """
-    knowledge_id = request.json.get('knowledge_id')
+    """Удаление знания из списка выбранных"""
+    # Проверяем, что данные пришли в формате JSON
+    if not request.is_json:
+        return jsonify({'success': False, 'message': 'Ожидается JSON'}), 400
+        
+    data = request.get_json()
+    knowledge_id = data.get('knowledge_id')
+    
+    # Преобразуем knowledge_id в int, так как из JSON он может прийти как строка
+    try:
+        knowledge_id = int(knowledge_id)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': 'Некорректный ID знания'}), 400
     
     if not knowledge_id:
-        return jsonify({'success': False, 'message': 'No knowledge ID provided'})
+        return jsonify({'success': False, 'message': 'Не указан ID знания'}), 400
     
-    # Get cart from session
+    # Получаем список из сессии
     knowledge_cart = session.get('knowledge_cart', [])
     
-    # Remove knowledge from cart if it's there
+    # Преобразуем все ID в списке в int для корректного сравнения
+    knowledge_cart = [int(k_id) for k_id in knowledge_cart]
+    
+    # Удаляем знание, если оно есть в списке
     if knowledge_id in knowledge_cart:
         knowledge_cart.remove(knowledge_id)
         session['knowledge_cart'] = knowledge_cart
+        # Принудительно сохраняем сессию
+        session.modified = True
         
-        # Get knowledge name for more helpful message
+        # Получаем название знания для сообщения
         knowledge = Knowledge.query.get(knowledge_id)
-        knowledge_name = knowledge.name if knowledge else 'Knowledge'
+        knowledge_name = knowledge.name if knowledge else 'Знание'
         
-        return jsonify({'success': True, 'message': f'Removed {knowledge_name} from learning goals'})
+        return jsonify({
+            'success': True, 
+            'message': f'Знание "{knowledge_name}" удалено из списка',
+            'cart_count': len(knowledge_cart)
+        })
     else:
-        return jsonify({'success': False, 'message': 'Knowledge not in learning goals'})
+        return jsonify({'success': False, 'message': 'Этого знания нет в списке'})
 
-@knowledge_shop.route('/knowledge-shop/view-roadmap')
+@knowledge_shop.route('/knowledge-shop/recommend-courses')
 @login_required
-def view_roadmap():
-    """
-    View the learning roadmap for selected target knowledge units.
-    Recommends courses to take based on prerequisites and desired knowledge.
-    """
-    # Get the knowledge cart from session
+def recommend_courses():
+    """Страница с рекомендуемыми курсами на основе выбранных знаний"""
+    # Получаем выбранные знания из сессии
     knowledge_ids = session.get('knowledge_cart', [])
     
     if not knowledge_ids:
-        return render_template('course_roadmap.html', 
+        return render_template('recommended_courses.html', 
                               target_knowledges=[],
-                              recommended_courses=[],
-                              missing_prerequisites=[])
+                              target_knowledge_ids=[],
+                              recommended_courses=[])
     
-    # Get knowledge details for cart items
+    # Получаем детали выбранных знаний
     target_knowledges = []
     for knowledge_id in knowledge_ids:
         knowledge = Knowledge.query.get(knowledge_id)
         if knowledge:
-            # Get student's current knowledge quality
+            # Получаем текущий уровень знания студента
             student_knowledge = StudentKnowledge.query.filter_by(
                 student_id=current_user.id,
                 knowledge_id=knowledge_id
             ).first()
             
             current_quality = student_knowledge.quality if student_knowledge else 0
-            quality_gap = max(0, 100 - current_quality)  # Assuming max quality is 100
             
             target_knowledges.append({
-                'knowledge': knowledge,
-                'current_quality': current_quality,
-                'quality_gap': quality_gap,
-                'progress_percent': current_quality  # Since max is 100
+                'id': knowledge_id,
+                'name': knowledge.name,
+                'description': knowledge.description,
+                'current_quality': current_quality
             })
     
-    # Create course roadmap to achieve target knowledge
-    roadmap_data = create_course_roadmap(knowledge_ids)
+    # Находим курсы, которые помогут получить выбранные знания
+    recommended_courses = find_courses_for_knowledges(knowledge_ids)
     
-    return render_template('course_roadmap.html', 
+    return render_template('recommended_courses.html', 
                           target_knowledges=target_knowledges,
-                          recommended_courses=roadmap_data['recommended_courses'],
-                          prerequisites=roadmap_data['prerequisites'],
-                          missing_prerequisites=roadmap_data['missing_prerequisites'],
-                          allow_skip_percent=roadmap_data['allow_skip_percent'])
+                          target_knowledge_ids=knowledge_ids,
+                          recommended_courses=recommended_courses)
 
 @knowledge_shop.route('/knowledge-shop/clear-cart', methods=['POST'])
 @login_required
 def clear_cart():
-    """
-    Clear the entire knowledge cart.
-    """
+    """Очистка списка выбранных знаний"""
     session['knowledge_cart'] = []
+    # Принудительно сохраняем сессию
+    session.modified = True
     
     return jsonify({
         'success': True, 
-        'message': 'Learning goals cleared',
+        'message': 'Список выбранных знаний очищен',
         'cart_count': 0
     })
 
-def create_course_roadmap(target_knowledge_ids):
-    """
-    Create a learning roadmap that shows which courses to take to acquire
-    the target knowledge, considering prerequisites.
+def find_courses_for_knowledges(target_knowledge_ids):
+    """Находит курсы, которые помогут получить выбранные знания.
     
     Args:
-        target_knowledge_ids: List of knowledge IDs the student wants to learn
+        target_knowledge_ids: Список ID знаний, которые студент хочет получить
     
     Returns:
-        Dictionary with recommended courses, prerequisites, and skip percentage
+        Список рекомендуемых курсов, отсортированный по релевантности
     """
     if not target_knowledge_ids:
-        return {
-            'recommended_courses': [], 
-            'prerequisites': [], 
-            'missing_prerequisites': [], 
-            'allow_skip_percent': 0
-        }
+        return []
     
-    # Build knowledge and course graphs
-    knowledge_prerequisites = defaultdict(list)  # Knowledge -> prerequisite knowledge
-    courses_by_final_knowledge = defaultdict(list)  # Knowledge -> courses that teach it
-    courses_by_required_knowledge = defaultdict(list)  # Knowledge -> courses that need it
-    course_details = {}
-    
-    # Get all courses
-    all_courses = Course.query.all()
-    
-    # Get student's current knowledge
-    # Get student's current knowledge
+    # Получаем текущий уровень знаний студента
     current_knowledge = {}
     for sk in StudentKnowledge.query.filter_by(student_id=current_user.id).all():
         current_knowledge[sk.knowledge_id] = sk.quality
     
-    # Find courses that teach the target knowledge
-    recommended_courses_set = set()  # Use a set to avoid duplicates
+    # Получаем все курсы
+    all_courses = Course.query.all()
+    course_data = {}
     
-    # For each target knowledge, find courses that teach it
-    for knowledge_id in target_knowledge_ids:
-        knowledge = Knowledge.query.get(knowledge_id)
-        if not knowledge:
-            continue
-            
-        # Find courses that provide this knowledge
-        for cfk in CourseFinalKnowledge.query.filter_by(knowledge_id=str(knowledge_id)).all():
-            course = Course.query.get(cfk.course_id)
-            if course:
-                courses_by_final_knowledge[knowledge_id].append({
-                    'course_id': course.id,
-                    'course': course,
-                    'quality': cfk.quality
-                })
-                recommended_courses_set.add(course.id)
-    
-    # Get details for all relevant courses and check their prerequisites
-    course_details = {}
-    all_prerequisites = []
-    missing_prerequisites = []
-    
-    # Get details for each course that teaches our target knowledge
-    for course_id in recommended_courses_set:
-        course = Course.query.get(course_id)
-        if not course:
-            continue
-            
-        # Get progress information for this course
+    # Для каждого курса определяем, какие знания он дает и насколько релевантен
+    for course in all_courses:
+        # Получаем все знания, которые дает этот курс
+        provided_knowledges = []
+        for cfk in CourseFinalKnowledge.query.filter_by(course_id=course.id).all():
+            try:
+                knowledge_id = int(cfk.knowledge_id)
+                knowledge = Knowledge.query.get(knowledge_id)
+                if knowledge:
+                    provided_knowledges.append({
+                        'id': knowledge_id,
+                        'name': knowledge.name,
+                        'quality': cfk.quality
+                    })
+            except (ValueError, TypeError):
+                # Обрабатываем случай, когда knowledge_id не является целым числом
+                pass
+        
+        # Получаем прогресс по курсу
         course_cards = [cc.card_id for cc in CourseCard.query.filter_by(course_id=course.id).all()]
         total_cards = len(course_cards)
         
@@ -248,31 +405,17 @@ def create_course_roadmap(target_knowledge_ids):
         else:
             completed_cards = 0
             progress_percent = 0
-            
-        # Initialize course details
-        course_details[course_id] = {
-            'course': course,
-            'completed_cards': completed_cards,
-            'total_cards': total_cards,
-            'progress_percent': progress_percent,
-            'prerequisites': [],
-            'missing_prerequisites': [],
-            'provides_target_knowledge': False
-        }
         
-        # Mark if this course provides any of our target knowledge
-        for k_id in target_knowledge_ids:
-            if any(cfk.knowledge_id == str(k_id) for cfk in CourseFinalKnowledge.query.filter_by(course_id=course.id).all()):
-                course_details[course_id]['provides_target_knowledge'] = True
-                break
-                
-        # Get prerequisites for this course
+        # Получаем необходимые знания для курса
+        prerequisites = []
+        missing_prerequisites = []
+        
         for prereq in CourseRequiredKnowledge.query.filter_by(course_id=course.id).all():
             try:
                 prereq_id = int(prereq.knowledge_id)
                 knowledge = Knowledge.query.get(prereq_id)
                 if knowledge:
-                    # Check student's knowledge level
+                    # Проверяем уровень знания студента
                     student_level = current_knowledge.get(prereq_id, 0)
                     required_level = prereq.quality
                     
@@ -284,93 +427,52 @@ def create_course_roadmap(target_knowledge_ids):
                         'quality_gap': max(0, required_level - student_level)
                     }
                     
-                    all_prerequisites.append(prereq_data)
-                    course_details[course_id]['prerequisites'].append(prereq_data)
+                    prerequisites.append(prereq_data)
                     
-                    # If prerequisite not met, add to missing
+                    # Если необходимое знание отсутствует, добавляем в список отсутствующих
                     if not prereq_data['is_met']:
-                        course_details[course_id]['missing_prerequisites'].append(prereq_data)
                         missing_prerequisites.append(prereq_data)
             except (ValueError, TypeError):
-                # Handle case where knowledge_id is not a valid integer
+                # Обрабатываем случай, когда knowledge_id не является целым числом
                 pass
-    
-    # Create a dependency graph to compute course levels
-    # First, find courses that have no missing prerequisites - these are level 0
-    level_0_courses = []
-    for course_id, details in course_details.items():
-        if not details['missing_prerequisites']:
-            level_0_courses.append(course_id)
-            
-    # Create an adjacency list for course prerequisites
-    course_dependencies = defaultdict(list)
-    for course_id, details in course_details.items():
-        # For each missing knowledge, find courses that provide it
-        for prereq in details['missing_prerequisites']:
-            knowledge_id = prereq['knowledge'].id
-            for course_info in courses_by_final_knowledge.get(knowledge_id, []):
-                if course_info['course_id'] != course_id:  # Don't create self-loops
-                    course_dependencies[course_id].append(course_info['course_id'])
-    
-    # Assign levels based on dependency depth
-    course_levels = {}
-    visited = set()
-    
-    # Start with level 0 courses (no missing prerequisites)
-    for course_id in level_0_courses:
-        course_levels[course_id] = 0
-        visited.add(course_id)
         
-    # For remaining courses, assign levels based on dependencies
-    # The more dependencies, the higher the level
-    remaining_courses = [c_id for c_id in course_details.keys() if c_id not in level_0_courses]
+        # Вычисляем процент выполненных необходимых знаний
+        if prerequisites:
+            prereq_met_count = sum(1 for p in prerequisites if p['is_met'])
+            prereq_met_percent = (prereq_met_count / len(prerequisites)) * 100
+        else:
+            prereq_met_percent = 100  # Если нет необходимых знаний, считаем 100%
+        
+        # Вычисляем релевантность курса для выбранных знаний
+        relevant_knowledge_count = sum(1 for k in provided_knowledges if k['id'] in target_knowledge_ids)
+        if provided_knowledges:
+            relevance_score = (relevant_knowledge_count / len(provided_knowledges)) * 100
+            # Если курс дает хотя бы одно из выбранных знаний, даем ему минимальный балл 30
+            if relevant_knowledge_count > 0 and relevance_score < 30:
+                relevance_score = 30
+        else:
+            relevance_score = 0
+        
+        # Сохраняем данные о курсе
+        course_data[course.id] = {
+            'id': course.id,
+            'name': course.name,
+            'description': course.description,
+            'estimated_time': course.estimated_time,
+            'completed_cards': completed_cards,
+            'total_cards': total_cards,
+            'progress_percent': progress_percent,
+            'provided_knowledges': provided_knowledges,
+            'prerequisites': prerequisites,
+            'missing_prerequisites': missing_prerequisites,
+            'prereq_met_percent': prereq_met_percent,
+            'relevance_score': relevance_score
+        }
     
-    # Sort by number of missing prerequisites
-    remaining_courses.sort(key=lambda x: len(course_details[x]['missing_prerequisites']))
+    # Отбираем только курсы с ненулевой релевантностью
+    relevant_courses = [course for course_id, course in course_data.items() if course['relevance_score'] > 0]
     
-    for course_id in remaining_courses:
-        if course_id not in visited:
-            # Level = 1 + maximum dependency level
-            dependency_levels = [course_levels.get(dep, 0) for dep in course_dependencies[course_id]]
-            level = 1 + (max(dependency_levels) if dependency_levels else 0)
-            course_levels[course_id] = level
-            visited.add(course_id)
+    # Сортируем курсы по релевантности (от высокой к низкой)
+    relevant_courses.sort(key=lambda x: (-x['relevance_score'], -x['prereq_met_percent']))
     
-    # Prepare the final course list ordered by level
-    recommended_courses = []
-    
-    # Add primary courses (those that directly teach target knowledge) first, ordered by level
-    primary_courses = [(course_id, details) for course_id, details in course_details.items() 
-                      if details['provides_target_knowledge']]
-    primary_courses.sort(key=lambda x: (course_levels.get(x[0], 0), len(x[1]['missing_prerequisites'])))
-    
-    for course_id, details in primary_courses:
-        details['level'] = course_levels.get(course_id, 0)
-        details['is_primary'] = True
-        recommended_courses.append(details)
-    
-    # Add prerequisite courses that don't directly teach target knowledge
-    secondary_courses = [(course_id, details) for course_id, details in course_details.items() 
-                       if not details['provides_target_knowledge']]
-    secondary_courses.sort(key=lambda x: (course_levels.get(x[0], 0), len(x[1]['missing_prerequisites'])))
-    
-    for course_id, details in secondary_courses:
-        details['level'] = course_levels.get(course_id, 0)
-        details['is_primary'] = False
-        recommended_courses.append(details)
-    
-    # Calculate how many prerequisites need to be skipped
-    total_prereqs = sum(len(course['prerequisites']) for course in recommended_courses if course['prerequisites'])
-    missing_prereqs = sum(len(course['missing_prerequisites']) for course in recommended_courses if course['missing_prerequisites'])
-    
-    if total_prereqs > 0:
-        allow_skip_percent = (missing_prereqs / total_prereqs) * 100
-    else:
-        allow_skip_percent = 0
-    
-    return {
-        'recommended_courses': recommended_courses,
-        'prerequisites': all_prerequisites,
-        'missing_prerequisites': missing_prerequisites,
-        'allow_skip_percent': allow_skip_percent
-    }
+    return relevant_courses
