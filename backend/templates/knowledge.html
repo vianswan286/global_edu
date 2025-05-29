@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}My Knowledge - Learning Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>My Knowledge</h1>
+        <p class="lead">Here's a summary of what you've learned so far</p>
+    </div>
+</div>
+
+{% if knowledges %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Knowledge Summary</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Knowledge</th>
+                                <th>Description</th>
+                                <th>Quality</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for k in knowledges %}
+                            <tr>
+                                <td><strong>{{ k.name }}</strong></td>
+                                <td>{{ k.description|truncate(100) }}</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ k.quality }}%;" 
+                                             aria-valuenow="{{ k.quality }}" aria-valuemin="0" aria-valuemax="100">
+                                            {{ k.quality }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ k.last_update.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <a href="{{ url_for('knowledge.knowledge_detail', knowledge_id=k.name if k.name else k.id) }}" class="btn btn-sm btn-outline-primary">
+                                        View Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <h4 class="alert-heading">No Knowledge Yet</h4>
+    <p>You haven't acquired any knowledge yet. Start a course to begin building your knowledge base!</p>
+    <hr>
+    <p class="mb-0">
+        <a href="{{ url_for('courses.course_list') }}" class="btn btn-primary">Browse Courses</a>
+    </p>
+</div>
+{% endif %}
+{% endblock %}

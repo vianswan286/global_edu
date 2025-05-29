@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Выбор знаний{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Выбор знаний</h1>
+                <div>
+                    <a href="{{ url_for('knowledge_shop.recommend_courses') }}" class="btn btn-primary position-relative">
+                        <i class="bi bi-book"></i> Показать рекомендуемые курсы
+                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ cart|length }}
+                        </span>
+                    </a>
+                </div>
+            </div>
+            
+            <p class="lead">Выберите знания, которые вы хотите получить, и мы покажем курсы, которые помогут вам их освоить.</p>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Доступные знания</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="knowledgeTable">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Описание</th>
+                                    <th>Текущий уровень</th>
+                                    <th>Действие</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for knowledge in knowledges %}
+                                <tr id="knowledge-row-{{ knowledge.id }}">
+                                    <td><strong>{{ knowledge.name }}</strong></td>
+                                    <td>{{ knowledge.description }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar {% if knowledge.current_quality > 0 %}bg-success{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ knowledge.current_quality }}%;" 
+                                                 aria-valuenow="{{ knowledge.current_quality }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ knowledge.current_quality }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if knowledge.id in cart %}
+                                            <button class="btn btn-sm btn-danger remove-knowledge" 
+                                                    data-knowledge-id="{{ knowledge.id }}" 
+                                                    data-knowledge-name="{{ knowledge.name }}">
+                                                Убрать из списка
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-success add-knowledge" 
+                                                    data-knowledge-id="{{ knowledge.id }}" 
+                                                    data-knowledge-name="{{ knowledge.name }}">
+                                                Добавить в список
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Выбранные знания</h5>
+                </div>
+                <div class="card-body">
+                    <div id="cart-preview">
+                        {% if cart %}
+                        <p class="text-muted">Знания, которые вы хотите получить:</p>
+                        <ul class="list-group mb-3">
+                            {% for knowledge_id in cart %}
+                                {% for knowledge in knowledges %}
+                                    {% if knowledge.id == knowledge_id %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ knowledge.name }}</strong>
+                                            <div class="small text-muted">
+                                                Текущий уровень: {{ knowledge.current_quality }}%
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-danger remove-knowledge" 
+                                                data-knowledge-id="{{ knowledge.id }}">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                        <a href="{{ url_for('knowledge_shop.recommend_courses') }}" class="btn btn-primary w-100">
+                            Показать рекомендуемые курсы
+                        </a>
+                        <button id="clear-cart" class="btn btn-outline-danger w-100 mt-2">Очистить список</button>
+                        {% else %}
+                        <p>Вы еще не выбрали ни одного знания. Выберите знания, чтобы увидеть рекомендуемые курсы.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Как это работает</h5>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li>Выберите знания, которые хотите получить</li>
+                        <li>Мы анализируем, какие курсы помогут вам получить эти знания</li>
+                        <li>Мы учитываем ваш текущий уровень знаний</li>
+                        <li>Мы показываем оптимальный набор курсов</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .progress-bar {
+        transition: width 0.5s ease;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add knowledge functionality
+        document.querySelectorAll('.add-knowledge').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const knowledgeId = this.getAttribute('data-knowledge-id');
+                const knowledgeName = this.getAttribute('data-knowledge-name');
+                
+                fetch("{{ url_for('knowledge_shop.add_knowledge_to_cart') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        knowledge_id: knowledgeId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update button to "Remove"
+                        this.classList.remove('btn-success', 'add-knowledge');
+                        this.classList.add('btn-danger', 'remove-knowledge');
+                        this.textContent = 'Убрать из списка';
+                        
+                        // Update cart count
+                        document.getElementById('cart-count').textContent = data.cart_count;
+                        
+                        // Refresh the page to update the cart preview
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+            });
+        });
+        
+        // Remove knowledge functionality
+        document.querySelectorAll('.remove-knowledge').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const knowledgeId = this.getAttribute('data-knowledge-id');
+                
+                fetch("{{ url_for('knowledge_shop.remove_knowledge_from_cart') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        knowledge_id: knowledgeId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // If we're in the cart preview, remove the entire list item
+                        const listItem = this.closest('li');
+                        if (listItem) {
+                            listItem.remove();
+                        } else {
+                            // Otherwise, update button to "Add"
+                            this.classList.remove('btn-danger', 'remove-knowledge');
+                            this.classList.add('btn-success', 'add-knowledge');
+                            this.textContent = 'Добавить в список';
+                        }
+                        
+                        // Update cart count
+                        document.getElementById('cart-count').textContent = data.cart_count;
+                        
+                        // Refresh the page to update the cart preview
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+            });
+        });
+        
+        // Clear cart functionality
+        document.getElementById('clear-cart')?.addEventListener('click', function() {
+            fetch("{{ url_for('knowledge_shop.clear_cart') }}", {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update cart count
+                    document.getElementById('cart-count').textContent = data.cart_count;
+                    
+                    // Refresh the page to update the buttons and cart preview
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+
+        // Add search functionality
+        document.getElementById('searchInput')?.addEventListener('keyup', function() {
+            const searchText = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#knowledgeTable tbody tr');
+            
+            rows.forEach(row => {
+                const name = row.querySelector('td:first-child').textContent.toLowerCase();
+                const description = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                
+                if (name.includes(searchText) || description.includes(searchText)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

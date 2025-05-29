@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ course.name }} - Educational Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    {% include 'components/common_styles.html' %}
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .course-header {
+            margin-bottom: 2rem;
+        }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .card-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .completed {
+            border-left: 4px solid #00b894;
+        }
+    </style>
+</head>
+<body>
+    {% with active_mode = 'courses' %}
+        {% include 'components/navbar.html' %}
+    {% endwith %}
+    
+    <div class="container">
+        <div class="course-header">
+            <h1>{{ course.name }}</h1>
+            {% if course.is_knowledge_based %}
+                <p class="theory">{{ course.description }}</p>
+            {% else %}
+                <p>{{ course.description }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="cards-grid">
+            {% for card in course.cards %}
+            <div class="card-item {% if card.completed %}completed{% endif %}">
+                <h3>Card #{{ loop.index }}</h3>
+                <p>{{ card.question }}</p>
+                <a href="{{ url_for('show_card', card_id=card.id, course_id=course.id, mode=mode) }}" 
+                   class="start-button">
+                    {% if mode == 'practice' %}Practice Card{% else %}Study Card{% endif %}
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

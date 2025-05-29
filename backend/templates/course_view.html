@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ course.name }} - Learning Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>{{ course.name }}</h1>
+        <p class="lead">{{ course.description }}</p>
+        <p><strong>Estimated time to complete:</strong> {{ course.estimated_time }} minutes</p>
+        
+        <!-- Course Progress Bar -->
+        {% set completed_cards = course_cards|selectattr('completed', 'eq', true)|list|length %}
+        {% set total_cards = course_cards|length %}
+        {% set progress_percent = (completed_cards / total_cards * 100) if total_cards > 0 else 0 %}
+        
+        <div class="progress mb-3" style="height: 20px;">
+            <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent }}%;" 
+                 aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                {{ completed_cards }}/{{ total_cards }} cards ({{ progress_percent|round|int }}%)
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('courses.course_list') }}" class="btn btn-outline-secondary">
+            Back to Courses
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>Course Content</h3>
+    </div>
+    <div class="card-body">
+        {% if course_cards %}
+            <div class="card-navigation-container">
+                <!-- Card counter display -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-counter">Card <span id="currentCardIndex">1</span> of <span id="totalCards">{{ course_cards|length }}</span></h5>
+                    <div class="progress w-50">
+                        <div id="progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%" 
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                
+                <!-- Flashcard container -->
+                <div class="flashcard-container">
+                    {% for card in course_cards %}
+                    <div class="flashcard" id="card-{{ loop.index0 }}" style="{% if not loop.first %}display: none;{% endif %}">
+                        <div class="card mb-0">
+                            <div class="card-body flashcard-body" onclick="flipCard({{ loop.index0 }})">
+                                <div class="flashcard-front" id="front-{{ loop.index0 }}">
+                                    <h4 class="card-title">{{ card.question }}</h4>
+                                    <p class="card-text text-muted">Click to see answer</p>
+                                    {% if card.time_minutes %}
+                                    <p class="card-text"><small class="text-muted">Estimated time: {{ card.time_minutes }} minutes</small></p>
+                                    {% endif %}
+                                </div>
+                                <div class="flashcard-back" id="back-{{ loop.index0 }}" style="display: none;">
+                                    <h5 class="card-title">Answer:</h5>
+                                    <p class="card-text">{{ card.answer }}</p>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <div class="d-flex justify-content-between">
+                                    <span class="badge {% if card.completed %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {% if card.completed %}Completed{% else %}Not started{% endif %}
+                                    </span>
+                                    <div>
+                                        {% if not card.completed %}
+                                        <button class="btn btn-sm btn-outline-secondary mark-btn" onclick="markCard({{ card.id }}, 'hard')">Hard</button>
+                                        <button class="btn btn-sm btn-outline-primary mark-btn" onclick="markCard({{ card.id }}, 'normal')">OK</button>
+                                        <button class="btn btn-sm btn-outline-success mark-btn" onclick="markCard({{ card.id }}, 'easy')">Easy</button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Navigation buttons -->
+                <div class="navigation-buttons mt-4 d-flex justify-content-between">
+                    <button id="prev-btn" class="btn btn-outline-secondary" onclick="prevCard()" disabled>Previous</button>
+                    <button id="next-btn" class="btn btn-outline-primary" onclick="nextCard()">Next</button>
+                </div>
+            </div>
+            
+            <!-- JavaScript for card navigation -->
+            <script>
+                let currentCardIndex = 0;
+                const totalCards = {{ course_cards|length }};
+                
+                function updateProgress() {
+                    // Update counter
+                    document.getElementById('currentCardIndex').textContent = (currentCardIndex + 1);
+                    
+                    // Update progress bar
+                    const progressPercentage = ((currentCardIndex + 1) / totalCards) * 100;
+                    const progressBar = document.getElementById('progress-bar');
+                    progressBar.style.width = progressPercentage + '%';
+                    progressBar.setAttribute('aria-valuenow', progressPercentage);
+                    
+                    // Enable/disable navigation buttons
+                    document.getElementById('prev-btn').disabled = (currentCardIndex === 0);
+                    document.getElementById('next-btn').disabled = (currentCardIndex === totalCards - 1);
+                }
+                
+                function showCard(index) {
+                    // Hide all cards
+                    const cards = document.querySelectorAll('.flashcard');
+                    cards.forEach(card => card.style.display = 'none');
+                    
+                    // Show the selected card
+                    document.getElementById('card-' + index).style.display = 'block';
+                    
+                    // Reset to front of card
+                    document.getElementById('front-' + index).style.display = 'block';
+                    document.getElementById('back-' + index).style.display = 'none';
+                    
+                    // Update progress
+                    currentCardIndex = index;
+                    updateProgress();
+                }
+                
+                function nextCard() {
+                    if (currentCardIndex < totalCards - 1) {
+                        showCard(currentCardIndex + 1);
+                    }
+                }
+                
+                function prevCard() {
+                    if (currentCardIndex > 0) {
+                        showCard(currentCardIndex - 1);
+                    }
+                }
+                
+                function flipCard(index) {
+                    const front = document.getElementById('front-' + index);
+                    const back = document.getElementById('back-' + index);
+                    
+                    if (front.style.display !== 'none') {
+                        front.style.display = 'none';
+                        back.style.display = 'block';
+                    } else {
+                        front.style.display = 'block';
+                        back.style.display = 'none';
+                    }
+                }
+                
+                function markCard(cardId, difficulty) {
+                    // Immediately update UI before AJAX request
+                    const cardElement = document.getElementById('card-' + currentCardIndex);
+                    const statusBadge = cardElement.querySelector('.badge');
+                    if (statusBadge) {
+                        statusBadge.className = 'badge bg-success';
+                        statusBadge.textContent = 'Completed';
+                    }
+                    
+                    // Hide the mark buttons immediately
+                    const markButtons = cardElement.querySelectorAll('.mark-btn');
+                    markButtons.forEach(btn => btn.style.display = 'none');
+                    
+                    // Update progress bar
+                    updateCourseProgress();
+                    
+                    // Send AJAX request to mark the card
+                    fetch('/cards/' + cardId + '/mark', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ difficulty: difficulty })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Automatically move to the next card after a short delay
+                        setTimeout(() => {
+                            nextCard();
+                        }, 1000); // Wait 1 second before advancing
+                    })
+                    .catch(error => {
+                        console.error('Error marking card:', error);
+                        // Revert UI changes if there was an error
+                        if (statusBadge) {
+                            statusBadge.className = 'badge bg-secondary';
+                            statusBadge.textContent = 'Not started';
+                        }
+                        // Show buttons again
+                        markButtons.forEach(btn => btn.style.display = 'inline-block');
+                    });
+                }
+                
+                // Function to update the overall course progress
+                function updateCourseProgress() {
+                    const completedCards = document.querySelectorAll('.badge.bg-success').length;
+                    const totalCards = {{ course_cards|length }};
+                    const progressPercent = (completedCards / totalCards * 100);
+                    
+                    // Update main progress bar
+                    const mainProgressBar = document.querySelector('.progress .progress-bar');
+                    if (mainProgressBar) {
+                        mainProgressBar.style.width = progressPercent + '%';
+                        mainProgressBar.setAttribute('aria-valuenow', progressPercent);
+                        mainProgressBar.textContent = completedCards + '/' + totalCards + ' cards (' + Math.round(progressPercent) + '%)';
+                    }
+                }
+                
+                // Initialize
+                updateProgress();
+            </script>
+            
+            <style>
+                .flashcard-container {
+                    min-height: 300px;
+                }
+                .flashcard-body {
+                    min-height: 200px;
+                    cursor: pointer;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    text-align: center;
+                    transition: all 0.3s ease;
+                }
+                .flashcard-body:hover {
+                    background-color: rgba(0,0,0,0.02);
+                }
+                .mark-btn {
+                    margin-left: 5px;
+                }
+            </style>
+        {% else %}
+            <div class="alert alert-info">
+                <p>This course does not have any cards associated with it yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Knowledge You'll Gain</h3>
+    </div>
+    <div class="card-body">
+        {% if final_knowledges %}
+            <p>This course will help you develop the following knowledge:</p>
+            <ul>
+                {% for knowledge in final_knowledges %}
+                <li>{{ knowledge.name }} (Quality: {{ knowledge.quality }}%)</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No specific knowledge outcomes are defined for this course.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

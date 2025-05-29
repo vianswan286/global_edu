@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Learning Roadmap{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Your Learning Roadmap</h1>
+        <a href="{{ url_for('knowledge_shop.shop_view') }}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Course Shop
+        </a>
+    </div>
+    
+    {% if target_courses %}
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Your Optimal Learning Path</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">This is your customized learning path based on course prerequisites and your current knowledge.</p>
+                        
+                        {% if allow_skip_percent > 0 %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> 
+                                <strong>Note:</strong> This roadmap requires skipping {{ allow_skip_percent|round }}% of prerequisites. Consider taking additional foundational courses or starting with a different target.
+                            </div>
+                        {% endif %}
+                        
+                        <div class="roadmap-timeline">
+                            {% for course in roadmap_courses %}
+                                <div class="card mb-3 {% if course.is_target %}border-primary{% endif %}">
+                                    <div class="card-body">
+                                        <div class="roadmap-step">
+                                            <div class="roadmap-level">
+                                                <span class="badge bg-secondary">Level {{ course.level }}</span>
+                                            </div>
+                                            <div class="roadmap-content">
+                                                <h5 class="card-title {% if course.is_target %}text-primary{% endif %}">
+                                                    {{ course.course.name }}
+                                                    {% if course.is_target %}
+                                                        <span class="badge bg-primary">Target Course</span>
+                                                    {% endif %}
+                                                </h5>
+                                                <p class="card-text">{{ course.course.description }}</p>
+                                                
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-2">
+                                                        <h6>Course Progress</h6>
+                                                        <div class="progress" style="height: 20px;">
+                                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                                style="width: {{ course.progress_percent }}%;"
+                                                                aria-valuenow="{{ course.progress_percent }}" 
+                                                                aria-valuemin="0" aria-valuemax="100">
+                                                                {{ course.progress_percent|round }}%
+                                                            </div>
+                                                        </div>
+                                                        <small class="text-muted">
+                                                            {{ course.completed_cards }} of {{ course.total_cards }} cards completed
+                                                        </small>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-6 mb-2">
+                                                        <h6>Prerequisites</h6>
+                                                        <div class="progress" style="height: 20px;">
+                                                            <div class="progress-bar 
+                                                                {% if course.prereq_met_percent == 100 %}bg-success
+                                                                {% elif course.prereq_met_percent >= 50 %}bg-warning
+                                                                {% else %}bg-danger{% endif %}" 
+                                                                role="progressbar" 
+                                                                style="width: {{ course.prereq_met_percent }}%;"
+                                                                aria-valuenow="{{ course.prereq_met_percent }}" 
+                                                                aria-valuemin="0" aria-valuemax="100">
+                                                                {{ course.prereq_met_percent|round }}%
+                                                            </div>
+                                                        </div>
+                                                        <small class="text-muted">
+                                                            {% if course.missing_prerequisites %}
+                                                                Missing {{ course.missing_prerequisites|length }} prerequisites
+                                                            {% else %}
+                                                                All prerequisites met
+                                                            {% endif %}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                
+                                                {% if course.missing_prerequisites %}
+                                                    <div class="mt-3">
+                                                        <h6 class="text-danger">Missing Prerequisites:</h6>
+                                                        <div class="missing-prereqs">
+                                                            {% for prereq in course.missing_prerequisites %}
+                                                                <span class="badge bg-danger me-1">
+                                                                    {{ prereq.knowledge.name }} 
+                                                                    ({{ prereq.current_quality }}/{{ prereq.required_quality }})
+                                                                </span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                                    <div>
+                                                        <span class="badge bg-secondary me-2">
+                                                            <i class="bi bi-clock"></i> 
+                                                            {{ course.course.estimated_time }} min
+                                                        </span>
+                                                    </div>
+                                                    <a href="{{ url_for('courses.start_course', course_id=course.course.id) }}" 
+                                                       class="btn btn-primary">
+                                                        <i class="bi bi-play-fill"></i> Start Course
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Target Courses</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">These are the courses you want to complete:</p>
+                        <ul class="list-group">
+                            {% for course_data in target_courses %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ course_data.course.name }}</strong>
+                                        <div class="small text-muted">{{ course_data.progress_percent|round }}% complete</div>
+                                    </div>
+                                    <a href="{{ url_for('courses.start_course', course_id=course_data.course.id) }}" 
+                                       class="btn btn-sm btn-primary">
+                                        <i class="bi bi-play-fill"></i>
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                
+                {% if missing_prerequisites %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">Missing Knowledge</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">You're missing these knowledge prerequisites:</p>
+                            <ul class="list-group">
+                                {% for prereq in missing_prerequisites %}
+                                    <li class="list-group-item">
+                                        <strong>{{ prereq.knowledge.name }}</strong>
+                                        <div class="progress mt-1" style="height: 15px;">
+                                            <div class="progress-bar bg-danger" role="progressbar" 
+                                                style="width: {{ (prereq.current_quality / prereq.required_quality * 100)|round }}%;"
+                                                aria-valuenow="{{ prereq.current_quality }}" 
+                                                aria-valuemin="0" aria-valuemax="{{ prereq.required_quality }}">
+                                                {{ prereq.current_quality }}/{{ prereq.required_quality }}
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Need {{ prereq.quality_gap }} more quality points</small>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Roadmap Legend</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <span class="badge bg-primary">Target Course</span>
+                                <span class="ms-2">Course you want to complete</span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="badge bg-secondary">Level 0</span>
+                                <span class="ms-2">Can be started immediately</span>
+                            </li>
+                            <li class="mb-2">
+                                <span class="badge bg-secondary">Level 1+</span>
+                                <span class="ms-2">Requires previous courses</span>
+                            </li>
+                            <li>
+                                <div class="progress" style="height: 15px; width: 100px;">
+                                    <div class="progress-bar bg-danger" role="progressbar" 
+                                        style="width: 50%;">
+                                    </div>
+                                </div>
+                                <span class="ms-2">Missing prerequisites</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> You haven't selected any target courses. 
+            <a href="{{ url_for('knowledge_shop.shop_view') }}">Go back to the Course Shop</a> to select courses.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .roadmap-timeline {
+        position: relative;
+    }
+    
+    .roadmap-timeline::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 20px;
+        width: 3px;
+        background-color: #dee2e6;
+        z-index: 0;
+    }
+    
+    .roadmap-step {
+        position: relative;
+        display: flex;
+        z-index: 1;
+    }
+    
+    .roadmap-level {
+        width: 40px;
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        padding-top: 5px;
+    }
+    
+    .roadmap-content {
+        flex-grow: 1;
+        padding-left: 15px;
+    }
+    
+    .progress-bar {
+        transition: width 0.5s ease;
+    }
+</style>
+{% endblock %}

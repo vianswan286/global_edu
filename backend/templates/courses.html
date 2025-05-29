@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Courses - Learning Platform{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Available Courses</h1>
+
+<!-- Tag Filtering -->
+<div class="mb-4">
+    <h5>Filter by Tag:</h5>
+    <div class="btn-group mb-3">
+        <a href="{{ url_for('courses.course_list') }}" class="btn btn-sm {% if not selected_tag %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
+        {% for tag in tags %}
+        <a href="{{ url_for('courses.course_list', tag=tag.name) }}" class="btn btn-sm {% if selected_tag == tag.name %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            {{ tag.name }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="row">
+    {% for course in courses %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h3 class="card-title">{{ course.name }}</h3>
+                <p class="card-text">{{ course.description }}</p>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-info text-dark">
+                        <i class="bi bi-clock"></i> Estimated time: {{ course.estimated_time }} minutes
+                    </span>
+                    
+                    {% if course.student_progress is defined %}
+                    <span class="badge bg-success">
+                        <i class="bi bi-graph-up"></i> Progress: {{ course.student_progress }}%
+                    </span>
+                    {% endif %}
+                </div>
+                
+                {% if course.completed_cards is defined and course.total_cards > 0 %}
+                <!-- Course Progress Bar -->
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: {{ (course.completed_cards / course.total_cards * 100)|round|int }}%;" 
+                         aria-valuenow="{{ (course.completed_cards / course.total_cards * 100)|round|int }}" 
+                         aria-valuemin="0" aria-valuemax="100">
+                        {{ course.completed_cards }}/{{ course.total_cards }} cards
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if course.missing_prerequisites %}
+                <div class="alert alert-warning">
+                    <h6>Missing Prerequisites:</h6>
+                    <ul class="mb-0">
+                        {% for prereq in course.missing_prerequisites %}
+                        <li>
+                            {{ prereq.name }} (Required: {{ prereq.required }}, Current: {{ prereq.current }})
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                {% if course.can_start %}
+                <a href="{{ url_for('courses.start_course', course_id=course.id) }}" class="btn btn-primary">Start Course</a>
+                {% else %}
+                <button class="btn btn-secondary" disabled>Prerequisites Needed</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col">
+        <div class="alert alert-info">
+            No courses available at the moment.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- User Knowledge Section -->
+<h2 class="mt-5 mb-3">Your Knowledge</h2>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Knowledge</th>
+                <th>Description</th>
+                <th>Quality</th>
+                <th>Progress</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for k in knowledges %}
+            <tr>
+                <td>{{ k.name }}</td>
+                <td>{{ k.description }}</td>
+                <td>{{ k.quality }}</td>
+                <td>
+                    <div class="progress">
+                        <div class="progress-bar {% if k.quality >= 80 %}bg-success{% elif k.quality >= 50 %}bg-info{% elif k.quality > 0 %}bg-warning{% else %}bg-danger{% endif %}"
+                             role="progressbar"
+                             style="width: {{ k.quality }}%"
+                             aria-valuenow="{{ k.quality }}"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                            {{ k.quality }}%
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

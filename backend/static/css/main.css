@@ -1,0 +1,99 @@
+/* Main Styles */
+:root {
+    --primary-color: #0984e3;
+    --secondary-color: #00b894;
+    --danger-color: #d63031;
+    --warning-color: #fdcb6e;
+    --dark-color: #2d3436;
+    --light-color: #f5f6fa;
+}
+
+body {
+    font-family: 'Poppins', 'Arial', sans-serif;
+    background-color: #f8f9fa;
+    color: var(--dark-color);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Card styles */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Button styles */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #0873c3;
+    border-color: #0873c3;
+}
+
+.btn-success {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-success:hover {
+    background-color: #00a382;
+    border-color: #00a382;
+}
+
+/* Progress bars */
+.progress {
+    height: 10px;
+    border-radius: 5px;
+}
+
+/* Knowledge level indicators */
+.knowledge-level {
+    display: inline-block;
+    width: 100px;
+    height: 10px;
+    background-color: #dfe6e9;
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+}
+
+.knowledge-level-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: var(--secondary-color);
+}
+
+/* Footer */
+footer {
+    background-color: white;
+    padding: 1.5rem 0;
+    border-top: 1px solid #dfe6e9;
+    margin-top: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 1rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+}
